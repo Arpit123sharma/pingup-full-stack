@@ -24,12 +24,14 @@ const syncUserCreation = inngest.createFunction(
         }
 
         const userData = {
-            _id: id,
+            clerkId: id,
             email: email_addresses[0].email_address,
             full_name: first_name + " " + last_name,
             profile_picture: image_url,
             username
         }
+        
+
         await User.create(userData)
         
     }

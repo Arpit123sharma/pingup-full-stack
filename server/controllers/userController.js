@@ -11,7 +11,7 @@ import { clerkClient } from "@clerk/express";
 export const getUserData = async (req, res) => {
     try {
         const { userId } = req.auth()
-        const user = await User.findById(userId)
+        const user = await User.findOne({clerkId : userId});
         if(!user){
             return res.json({success: false, message: "User not found"})
         }
