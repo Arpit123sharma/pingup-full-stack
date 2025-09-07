@@ -1,4 +1,4 @@
-import React, { useState } from 'react'
+import { useState } from 'react'
 import { BadgeCheck, Heart, MessageCircle, Share2 } from 'lucide-react'
 import moment from 'moment'
 import { useNavigate } from 'react-router-dom'
@@ -22,10 +22,10 @@ const PostCard = ({post}) => {
             if (data.success){
                toast.success(data.message) 
                setLikes(prev =>{
-                if(prev.includes(currentUser._id)){
-                    return prev.filter(id=> id !== currentUser._id)
+                if(prev.includes(currentUser.clerkId)){
+                    return prev.filter(id=> id !== currentUser.clerkId)
                 }else{
-                    return [...prev, currentUser._id]
+                    return [...prev, currentUser.clerkId]
                 }
                })
             }else{

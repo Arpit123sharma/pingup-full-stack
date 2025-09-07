@@ -15,7 +15,7 @@ const UserCard = ({user}) => {
 
     const handleFollow = async () => {
         try {
-            const { data } = await api.post('/api/user/follow', {id: user._id}, {
+            const { data } = await api.post('/api/user/follow', {id: user.clerkId}, {
                 headers: { Authorization: `Bearer ${await getToken()}` }
             })
             if (data.success) {
@@ -30,12 +30,12 @@ const UserCard = ({user}) => {
     }
 
     const handleConnectionRequest = async () => {
-        if(currentUser.connections.includes(user._id)){
-            return navigate('/messages/' + user._id)
+        if(currentUser.connections.includes(user.clerkId)){
+            return navigate('/messages/' + user.clerkId)
         }
 
         try {
-            const { data } = await api.post('/api/user/connect', {id: user._id}, {
+            const { data } = await api.post('/api/user/connect', {id: user.clerkId}, {
                 headers: { Authorization: `Bearer ${await getToken()}` }
             })
             if (data.success) {

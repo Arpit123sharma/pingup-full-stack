@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react'
+import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import moment from 'moment'
 import { useAuth, useUser } from '@clerk/clerk-react'
@@ -20,7 +20,7 @@ const RecentMessages = () => {
             if(data.success){
                 // Group messages by sender and get the latest message for each sender
                 const groupedMessages = data.messages.reduce((acc, message)=>{
-                    const senderId = message.from_user_id._id;
+                    const senderId = message.from_user_id.clerkId;
                     if(!acc[senderId] || new Date(message.createdAt) > new Date(acc[senderId].createdAt)){
                         acc[senderId] = message
                     }
