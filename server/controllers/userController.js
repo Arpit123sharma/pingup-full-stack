@@ -11,7 +11,7 @@ import { clerkClient } from "@clerk/express";
 export const getUserData = async (req, res) => {
     try {
         const { userId } = req.auth()
-        const user = await User.findById(userId);
+        const user = await User.findOne({ clerkId: userId });
         if(!user){
             return res.json({success: false, message: "User not found"})
         }
@@ -28,7 +28,7 @@ export const updateUserData = async (req, res) => {
         const { userId } = req.auth()
         let {username, bio, location, full_name } = req.body;
 
-        const tempUser = await User.findById(userId)
+        const tempUser = await User.findOne({ clerkId: userId });
 
         !username && (username = tempUser.username)
 
@@ -89,7 +89,11 @@ export const updateUserData = async (req, res) => {
             updatedData.cover_photo = url;
         }
 
-        const user = await User.findByIdAndUpdate(userId, updatedData, {new : true})
+        const user = await User.findOneAndUpdate(
+                        { clerkId: userId },
+                        updatedData,
+                        { new: true }
+                    );
 
         res.json({success: true, user, message: 'Profile updated successfully'})
 
@@ -115,7 +119,8 @@ export const discoverUsers = async (req, res) => {
                 ]
             }
         )
-        const filteredUsers = allUsers.filter(user=> user._id !== userId);
+        const filteredUsers = allUsers.filter(user => user.clerkId !== userId);
+
 
         res.json({success: true, users: filteredUsers})
         
@@ -131,7 +136,7 @@ export const followUser = async (req, res) => {
         const { userId } = req.auth()
         const { id } = req.body;
 
-        const user = await User.findById(userId)
+        const user = await User.findOne({ clerkId: userId });
 
         if(user.following.includes(id)){
             return res.json({ success: false, message: 'You are already following this user'})
@@ -140,7 +145,7 @@ export const followUser = async (req, res) => {
         user.following.push(id);
         await user.save()
 
-        const toUser = await User.findById(id)
+        const toUser = await User.findOne({ clerkId: id })
         toUser.followers.push(userId)
         await toUser.save()
 
@@ -158,11 +163,11 @@ export const unfollowUser = async (req, res) => {
         const { userId } = req.auth()
         const { id } = req.body;
 
-        const user = await User.findById(userId)
+        const user = await User.findOne({ clerkId: userId });
         user.following = user.following.filter(user=> user !== id);
         await user.save()
 
-        const toUser = await User.findById(id)
+        const toUser = await User.findOne({ clerkId: id })
         toUser.followers = toUser.followers.filter(user=> user !== userId);
         await toUser.save()
         
@@ -223,15 +228,17 @@ export const sendConnectionRequest = async (req, res) => {
 export const getUserConnections = async (req, res) => {
     try {
         const {userId} = req.auth()
-        const user = await User.findById(userId).populate('connections followers following')
+        const user = await User.findOne({ clerkId: userId });
 
-        const connections = user.connections
-        const followers = user.followers
-        const following = user.following
+        const connections = await User.find({ clerkId: { $in: user.connections } });
+        const followers = await User.find({ clerkId: { $in: user.followers } });
+        const following = await User.find({ clerkId: { $in: user.following } });
 
-        const pendingConnections = (await Connection.find({to_user_id: userId, status: 'pending'}).populate('from_user_id')).map(connection=>connection.from_user_id)
+        const pendingConnections = (await Connection.find({ to_user_id: userId, status: 'pending' }))
+            .map(connection => connection.from_user_id); // or fetch user details similarly if needed
 
-        res.json({success: true, connections, followers, following, pendingConnections})
+        res.json({ success: true, connections, followers, following, pendingConnections });
+
 
     } catch (error) {
         console.log(error);
@@ -251,11 +258,11 @@ export const acceptConnectionRequest = async (req, res) => {
             return res.json({ success: false, message: 'Connection not found' });
         }
 
-        const user = await User.findById(userId);
+        const user = await User.findOne({ clerkId: userId });
         user.connections.push(id);
         await user.save()
 
-        const toUser = await User.findById(id);
+        const toUser = await User.findOne({ clerkId: id });
         toUser.connections.push(userId);
         await toUser.save()
 
@@ -275,13 +282,21 @@ export const acceptConnectionRequest = async (req, res) => {
 export const getUserProfiles = async (req, res) =>{
     try {
         const { profileId } = req.body;
-        const profile = await User.findById(profileId)
+        const profile = await User.findOne({ clerkId: profileId });
         if(!profile){
             return res.json({ success: false, message: "Profile not found" });
         }
-        const posts = await Post.find({user: profileId}).populate('user')
+        const posts = await Post.find({ user: profile.clerkId });
+        const users = await User.find({ clerkId: { $in: posts.map(p => p.user) } });
+        const usersMap = Object.fromEntries(users.map(u => [u.clerkId, u.toObject()]));
 
-        res.json({success: true, profile, posts})
+        const postsWithUsers = posts.map(post => ({
+            ...post.toObject(),
+            user: usersMap[post.user] || null
+        }));
+
+        res.json({ success: true, profile, posts: postsWithUsers });
+
     } catch (error) {
         console.log(error);
         res.json({success: false, message: error.message})

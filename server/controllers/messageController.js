@@ -68,11 +68,15 @@ export const sendMessage = async (req, res) => {
 
         // Send message to to_user_id using SSE
 
-        const messageWithUserData = await Message.findById(message._id).populate('from_user_id');
+        const messageData = message.toObject();
+        const fromUser = await User.findOne({ clerkId: userId });
+
+        messageData.from_user_id = fromUser;
 
         if(connections[to_user_id]){
-           connections[to_user_id].write(`data: ${JSON.stringify(messageWithUserData)}\n\n`)
+            connections[to_user_id].write(`data: ${JSON.stringify(messageData)}\n\n`);
         }
+
 
     } catch (error) {
         console.log(error);
@@ -104,9 +108,22 @@ export const getChatMessages = async (req, res) => {
 export const getUserRecentMessages = async (req, res) => {
     try {
         const { userId } = req.auth();
-        const messages = await Message.find({to_user_id: userId}).populate('from_user_id to_user_id').sort({ created_at: -1 });
+        const messages = await Message.find({to_user_id: userId}).sort({ created_at: -1 });
 
-        res.json({ success: true, messages });
+        const userIds = [...new Set(messages.flatMap(msg => [msg.from_user_id, msg.to_user_id]))];
+
+        const users = await User.find({ clerkId: { $in: userIds } });
+
+        const usersMap = Object.fromEntries(users.map(user => [user.clerkId, user.toObject()]));
+
+        const messagesWithUsers = messages.map(msg => ({
+            ...msg.toObject(),
+            from_user_id: usersMap[msg.from_user_id] || null,
+            to_user_id: usersMap[msg.to_user_id] || null,
+        }));
+
+        res.json({ success: true, messages: messagesWithUsers });
+
     } catch (error) {
         res.json({ success: false, message: error.message });
     }

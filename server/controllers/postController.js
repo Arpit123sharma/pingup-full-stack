@@ -52,13 +52,23 @@ export const addPost = async (req, res) => {
 export const getFeedPosts = async (req, res) =>{
     try {
         const { userId } = req.auth()
-        const user = await User.findById(userId)
+        const user = await User.findOne({ clerkId: userId });
 
         // User connections and followings 
         const userIds = [userId, ...user.connections, ...user.following]
-        const posts = await Post.find({user: {$in: userIds}}).populate('user').sort({createdAt: -1});
+        const posts = await Post.find({user: {$in: userIds}}).sort({createdAt: -1});
 
-        res.json({ success: true, posts})
+        const users = await User.find({ clerkId: { $in: userIds } });
+        const usersMap = Object.fromEntries(users.map(user => [user.clerkId, user.toObject()]));
+
+        const postsWithUsers = posts.map(post => ({
+            ...post.toObject(),
+            user: usersMap[post.user] || null
+        }));
+
+        res.json({ success: true, posts: postsWithUsers });
+
+        
     } catch (error) {
         console.log(error);
         res.json({ success: false, message: error.message });
