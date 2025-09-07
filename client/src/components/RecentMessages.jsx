@@ -1,5 +1,4 @@
 import React, { useEffect, useState } from 'react'
-import { dummyRecentMessagesData } from '../assets/assets'
 import { Link } from 'react-router-dom'
 import moment from 'moment'
 import { useAuth, useUser } from '@clerk/clerk-react'

@@ -1,5 +1,4 @@
 import React, { useState } from 'react'
-import { dummyUserData } from '../assets/assets'
 import { Pencil } from 'lucide-react';
 import { useDispatch, useSelector } from 'react-redux';
 import { updateUser } from '../features/user/userSlice';
