@@ -20,7 +20,7 @@ const navigate = useNavigate()
       </div>
       <div className='flex border-l border-gray-200'>
         <button onClick={()=>{
-            navigate(`/messages/${message.from_user_id._id}`);
+            navigate(`/messages/${message.from_user_id.clerkId}`);
             toast.dismiss(t.id)
         }} className='p-4 text-indigo-600 font-semibold'>
             Reply

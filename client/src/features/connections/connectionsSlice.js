@@ -23,13 +23,23 @@ const connectionsSlice = createSlice({
 
     },
     extraReducers: (builder)=>{
-        builder.addCase(fetchConnections.fulfilled, (state, action)=>{
-            if(action.payload){
-                state.connections = action.payload.connections
-                state.pendingConnections = action.payload.pendingConnections
-                state.followers = action.payload.followers
-                state.following = action.payload.following
+        builder
+        .addCase(fetchConnections.pending, (state) => {
+            state.loading = true;
+        })
+        .addCase(fetchConnections.fulfilled, (state, action)=>{
+            state.loading = false;
+            console.log('fetchConnections fulfilled:', action.payload);
+            if(action.payload && action.payload.success){
+                state.connections = action.payload.connections || [];
+                state.pendingConnections = action.payload.pendingConnections || [];
+                state.followers = action.payload.followers || [];
+                state.following = action.payload.following || [];
             }
+        })
+        .addCase(fetchConnections.rejected, (state, action)=>{
+            state.loading = false;
+            state.error = action.error.message;
         })
     }
 })
