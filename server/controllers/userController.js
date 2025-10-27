@@ -226,25 +226,49 @@ export const sendConnectionRequest = async (req, res) => {
 
 // Get User Connections
 export const getUserConnections = async (req, res) => {
-    try {
-        const {userId} = req.auth()
-        const user = await User.findOne({ clerkId: userId });
+  try {
+    const { userId } = req.auth();
+    const user = await User.findOne({ clerkId: userId });
 
-        const connections = await User.find({ clerkId: { $in: user.connections } });
-        const followers = await User.find({ clerkId: { $in: user.followers } });
-        const following = await User.find({ clerkId: { $in: user.following } });
-
-        const pendingConnections = (await Connection.find({ to_user_id: userId, status: 'pending' }))
-            .map(connection => connection.from_user_id); // or fetch user details similarly if needed
-
-        res.json({ success: true, connections, followers, following, pendingConnections });
-
-
-    } catch (error) {
-        console.log(error);
-        res.json({success: false, message: error.message})
+    // If user not found
+    if (!user) {
+      return res.status(404).json({ success: false, message: 'User not found' });
     }
-}
+
+    // Fetch full user objects for these arrays (works even if arrays are empty)
+    const connections = await User.find({ clerkId: { $in: user.connections || [] } });
+    const followers   = await User.find({ clerkId: { $in: user.followers || [] } });
+    const following   = await User.find({ clerkId: { $in: user.following || [] } });
+
+    // Get pending connection documents (from other users -> this user)
+    const pendingDocs = await Connection.find({ to_user_id: userId, status: 'pending' });
+
+    // Extract the from_user_ids (unique)
+    const pendingIds = [...new Set(pendingDocs.map(c => c.from_user_id).filter(Boolean))];
+
+    // Fetch user objects for pending IDs
+    let pendingConnections = [];
+    if (pendingIds.length > 0) {
+      pendingConnections = await User.find({ clerkId: { $in: pendingIds } });
+      // OPTIONAL: If you want pendingConnections in the same order as pendingIds:
+      // const pendingMap = new Map(pendingConnections.map(u => [u.clerkId, u]));
+      // pendingConnections = pendingIds.map(id => pendingMap.get(id)).filter(Boolean);
+    }
+
+    return res.json({
+      success: true,
+      connections,
+      followers,
+      following,
+      pendingConnections
+    });
+
+  } catch (error) {
+    console.error(error);
+    return res.status(500).json({ success: false, message: error.message });
+  }
+};
+
 
 // Accept Connection Request
 export const acceptConnectionRequest = async (req, res) => {

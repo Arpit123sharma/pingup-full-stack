@@ -15,7 +15,9 @@ const Connections = () => {
   const { getToken } = useAuth()
   const dispatch = useDispatch()
 
-  const {connections, pendingConnections, followers, following} = useSelector((state)=>state.connections)
+  const { connections = [], pendingConnections = [], followers = [], following = [] } =
+  useSelector((state) => state.connections || {});
+
 
   const dataArray = [
     {label: 'Followers', value: followers, icon: Users },
@@ -23,6 +25,25 @@ const Connections = () => {
     {label: 'Pending', value: pendingConnections, icon: UserRoundPen },
     {label: 'Connections', value: connections, icon: UserPlus },
   ]
+
+  // safe current tab object (fallback to first tab if not found)
+const current = dataArray.find((item) => item.label === currentTab) || dataArray[0];
+
+// normalize items so every entry is a user object (if it's an id string, create a placeholder)
+const listForRender = (Array.isArray(current.value) ? current.value : []).map((u) =>
+  typeof u === 'string'
+    ? {
+        clerkId: u,
+        full_name: 'Unknown user',
+        username: '',
+        bio: '',
+        profile_picture: '/placeholder-avatar.png',
+        // optional flag if you want to handle id-only entries differently:
+        isIdOnly: true,
+      }
+    : u
+);
+
 
   const handleUnfollow = async (userId) => {
     try {
@@ -83,7 +104,7 @@ const Connections = () => {
       </div>
 
        {/* Tabs */}
-       <div className='inline-flex flex-wrap items-center border border-gray-200 rounded-md p-1 bg-white shadow-sm'>
+       <div className='inline-flex flex-wrap items-lawdecenter border border-gray-200 rounded-md p-1 bg-white shadow-sm'>
         {
           dataArray.map((tab)=>(
             <button onClick={()=> setCurrentTab(tab.label)} key={tab.label} className={`cursor-pointer flex items-center px-3 py-1 text-sm rounded-md transition-colors ${currentTab === tab.label ? 'bg-white font-medium text-black' : 'text-gray-500 hover:text-black'}`}>
@@ -99,45 +120,50 @@ const Connections = () => {
 
        {/* Connections */}
         <div className='flex flex-wrap gap-6 mt-6'>
-          {dataArray.find((item)=>item.label === currentTab).value.map((user)=>(
-            <div key={user.clerkId} className='w-full max-w-88 flex gap-5 p-6 bg-white shadow rounded-md '>
-              <img src={user.profile_picture} alt="" className="rounded-full w-12 h-12 shadow-md mx-auto"/>
-              <div className='flex-1'>
-                <p className="font-medium  text-slate-700">{user.full_name}</p>
-                <p className="text-slate-500">@{user.username}</p>
-                <p className="text-sm text-gray-600">{user.bio.slice(0, 30)}...</p>
-                <div className='flex max-sm:flex-col gap-2 mt-4'>
-                  {
+          {listForRender.length > 0 ? (
+            listForRender.map((user) => (
+              <div key={user.clerkId} className='w-full max-w-88 flex gap-5 p-6 bg-white shadow rounded-md '>
+                <img src={user.profile_picture} alt="" className="rounded-full w-12 h-12 shadow-md mx-auto"/>
+                <div className='flex-1'>
+                  <p className="font-medium  text-slate-700">{user.full_name}</p>
+                  <p className="text-slate-500">@{user.username}</p>
+                  <p className="text-sm text-gray-600">{(user.bio || '').slice(0, 30)}{(user.bio || '').length > 30 ? '...' : ''}</p>
+
+                  <div className='flex max-sm:flex-col gap-2 mt-4'>
                     <button onClick={()=> navigate(`/profile/${user.clerkId}`)} className='w-full p-2 text-sm rounded bg-gradient-to-r from-indigo-500 to-purple-600 hover:from-indigo-600 hover:to-purple-700 active:scale-95 transition text-white cursor-pointer'>
                       View Profile
                     </button>
-                  }
-                  {
-                    currentTab === 'Following' && (
-                      <button onClick={()=> handleUnfollow(user.clerkId)} className='w-full p-2 text-sm rounded bg-slate-100 hover:bg-slate-200 text-black active:scale-95 transition cursor-pointer'>
-                        Unfollow
-                      </button>
-                    )
-                  }
-                  {
-                    currentTab === 'Pending' && (
-                      <button onClick={()=>acceptConnection(user.clerkId)} className='w-full p-2 text-sm rounded bg-slate-100 hover:bg-slate-200 text-black active:scale-95 transition cursor-pointer'>
-                        Accept
-                      </button>
-                    )
-                  }
-                  {
-                    currentTab === 'Connections' && (
-                      <button onClick={()=> navigate(`/messages/${user.clerkId}`)} className='w-full p-2 text-sm rounded bg-slate-100 hover:bg-slate-200 text-slate-800 active:scale-95 transition cursor-pointer flex items-center justify-center gap-1'>
-                        <MessageSquare className='w-4 h-4'/>
-                        Message
-                      </button>
-                    )
-                  }
+
+                    {
+                      currentTab === 'Following' && (
+                        <button onClick={()=> handleUnfollow(user.clerkId)} className='w-full p-2 text-sm rounded bg-slate-100 hover:bg-slate-200 text-black active:scale-95 transition cursor-pointer'>
+                          Unfollow
+                        </button>
+                      )
+                    }
+                    {
+                      currentTab === 'Pending' && (
+                        <button onClick={()=>acceptConnection(user.clerkId)} className='w-full p-2 text-sm rounded bg-slate-100 hover:bg-slate-200 text-black active:scale-95 transition cursor-pointer'>
+                          Accept
+                        </button>
+                      )
+                    }
+                    {
+                      currentTab === 'Connections' && (
+                        <button onClick={()=> navigate(`/messages/${user.clerkId}`)} className='w-full p-2 text-sm rounded bg-slate-100 hover:bg-slate-200 text-slate-800 active:scale-95 transition cursor-pointer flex items-center justify-center gap-1'>
+                          <MessageSquare className='w-4 h-4'/>
+                          Message
+                        </button>
+                      )
+                    }
+                  </div>
                 </div>
               </div>
-            </div>
-          ))}
+            ))
+          ) : (
+            <div className='p-6 bg-white shadow rounded-md w-full'>No users in {current.label}</div>
+          )}
+
         </div>
 
       </div>
