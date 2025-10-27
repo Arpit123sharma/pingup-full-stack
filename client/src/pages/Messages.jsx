@@ -3,9 +3,11 @@ import { useNavigate } from 'react-router-dom'
 import { useSelector } from 'react-redux'
 
 const Messages = () => {
-
-  const { connections } = useSelector((state)=>state.connections)
+  const { connections = [] } = useSelector((state)=>state.connections || {})
   const navigate = useNavigate()
+
+  // quick debug: uncomment if you want to verify IDs
+  // console.log('connections', connections.map(c => ({ clerkId: c.clerkId, _id: c._id })))
 
   return (
     <div className='min-h-screen relative bg-slate-50'>
@@ -18,29 +20,47 @@ const Messages = () => {
 
         {/* Connected Users */}
         <div className='flex flex-col gap-3'>
-          {connections.map((user)=>(
-            <div key={user._id} className='max-w-xl flex flex-warp gap-5 p-6 bg-white shadow rounded-md'>
-              <img src={user.profile_picture} alt="" className='rounded-full size-12 mx-auto'/>
-              <div className='flex-1'>
-                <p className='font-medium text-slate-700'>{user.full_name}</p>
-                <p className='text-slate-500'>@{user.username}</p>
-                <p className='text-sm text-gray-600'>{user.bio}</p>
-              </div>
+          {Array.isArray(connections) && connections.length > 0 ? (
+            connections.map((user) => {
+              const id = user.clerkId ?? user._id // prefer clerkId but fallback
+              return (
+                <div key={id} className='max-w-xl flex flex-wrap gap-5 p-6 bg-white shadow rounded-md'>
+                  <img
+                    src={user.profile_picture || '/placeholder-avatar.png'}
+                    alt={`${user.full_name || 'User'} avatar`}
+                    className='rounded-full w-12 h-12 mx-auto'
+                  />
+                  <div className='flex-1'>
+                    <p className='font-medium text-slate-700'>{user.full_name || 'Unknown'}</p>
+                    <p className='text-slate-500'>@{user.username || ''}</p>
+                    <p className='text-sm text-gray-600'>{(user.bio || '').slice(0, 80)}</p>
+                  </div>
 
-              <div className='flex flex-col gap-2 mt-4'>
+                  <div className='flex flex-col gap-2 mt-4'>
+                    <button
+                      type='button'
+                      aria-label={`Open chat with ${user.full_name || id}`}
+                      onClick={() => navigate(`/messages/${id}`)}
+                      className='w-10 h-10 flex items-center justify-center text-sm rounded bg-slate-100 hover:bg-slate-200 text-slate-800 active:scale-95 transition cursor-pointer gap-1'
+                    >
+                      <MessageSquare className="w-4 h-4"/>
+                    </button>
 
-                <button onClick={()=> navigate(`/messages/${user._id}`)} className='size-10 flex items-center justify-center text-sm rounded bg-slate-100 hover:bg-slate-200 text-slate-800 active:scale-95 transition cursor-pointer gap-1'>
-                  <MessageSquare className="w-4 h-4"/>
-                </button>
-
-                <button onClick={()=> navigate(`/profile/${user._id}`)} className='size-10 flex items-center justify-center text-sm rounded bg-slate-100 hover:bg-slate-200 text-slate-800 active:scale-95 transition cursor-pointer'>
-                  <Eye className="w-4 h-4"/>
-                </button>
-
-              </div>
-
-            </div>
-          ))}
+                    <button
+                      type='button'
+                      aria-label={`View profile ${user.full_name || id}`}
+                      onClick={() => navigate(`/profile/${id}`)}
+                      className='w-10 h-10 flex items-center justify-center text-sm rounded bg-slate-100 hover:bg-slate-200 text-slate-800 active:scale-95 transition cursor-pointer'
+                    >
+                      <Eye className="w-4 h-4"/>
+                    </button>
+                  </div>
+                </div>
+              )
+            })
+          ) : (
+            <div className='p-6 bg-white shadow rounded-md w-full'>No connections yet</div>
+          )}
         </div>
       </div>
     </div>
