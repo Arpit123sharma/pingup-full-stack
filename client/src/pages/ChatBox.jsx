@@ -63,13 +63,41 @@ const ChatBox = () => {
   }
 
   // On mount / route change: load messages and reset on unmount
-  useEffect(() => {
-    fetchUserMessages()
-    return () => {
-      dispatch(resetMessages())
+ // 🔁 Poll messages continuously while the chat is open
+useEffect(() => {
+  let mounted = true;
+  let intervalId;
+
+  const startPolling = async () => {
+    try {
+      // 1️⃣ Initial fetch when chat opens
+      await fetchUserMessages();
+
+      // 2️⃣ Then keep fetching every 3 seconds
+      intervalId = setInterval(async () => {
+        if (!mounted) return;
+        try {
+          const token = await getToken(); // ✅ always get fresh token
+          dispatch(fetchMessages({ token, userId: routeUserId }));
+        } catch (err) {
+          console.error('polling error', err);
+        }
+      }, 3000);
+    } catch (err) {
+      console.error('polling start error', err);
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [routeUserId])
+  };
+
+  startPolling();
+
+  // 3️⃣ Clean up when leaving chat
+  return () => {
+    mounted = false;
+    if (intervalId) clearInterval(intervalId);
+    dispatch(resetMessages());
+  };
+}, [routeUserId, dispatch, getToken]);
+
 
   // Resolve `user` from connections list — prefer clerkId
   useEffect(() => {
